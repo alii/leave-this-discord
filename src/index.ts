@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import fastify from "fastify";
 import {blue, green} from "colorette";
 import {Client} from "./client";
