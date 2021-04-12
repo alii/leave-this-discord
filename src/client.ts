@@ -26,13 +26,13 @@ export class Client extends DiscordClient {
 	 * Gets OAuth keys from the database, refreshes if needed or throws if they do not exist
 	 * @param snowflake The id of the user
 	 */
-	async getOAuthKeys(snowflake: string): Promise<string> {
+	async getOAuthKeys(snowflake: string): Promise<string | null> {
 		const user = await prisma.user.findFirst({
 			where: {snowflake},
 		});
 
 		if (!user) {
-			throw new Error("No user foujd");
+			return null;
 		}
 
 		// TODO: This should revalidate if tokens are expired
@@ -46,6 +46,10 @@ export class Client extends DiscordClient {
 	 */
 	async invite(snowflake: string): Promise<void> {
 		const access_token = await this.getOAuthKeys(snowflake);
+
+		if (!access_token) {
+			return;
+		}
 
 		const endpoint = `/guilds/${Client.SERVER_ID}/members/${snowflake}`;
 		const url = `https://discord.com/api/v8${endpoint}`;
