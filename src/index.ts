@@ -6,11 +6,12 @@ import fastifyStatic from "fastify-static";
 import {object, string} from "zod";
 import fetch from "node-fetch";
 import {User} from "discord.js";
+import {prisma} from "./prisma";
 
 const cwd = process.cwd();
 const app = fastify();
 
-const scope = ["guilds.join"].join(" ");
+const scope = ["guilds.join", "identify"].join(" ");
 
 const schema = object({
 	code: string().nonempty(),
@@ -19,6 +20,7 @@ const schema = object({
 app.register(fastifyStatic, {root: path.join(cwd, "public")});
 
 app.setErrorHandler((error, req, res) => {
+	console.log(error);
 	res.sendFile("error.html");
 });
 
@@ -34,17 +36,16 @@ app.get("/callback", async (req, res) => {
 		scope,
 	}).toString();
 
-	const {access_token = null, refresh_token = null} = await fetch(
-		"https://discord.com/api/oauth2/token",
-		{
-			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			method: "POST",
-			body,
-		}
-	).then((res) => res.json());
+	const a = await fetch("https://discord.com/api/oauth2/token", {
+		headers: {"Content-Type": "application/x-www-form-urlencoded"},
+		method: "POST",
+		body,
+	}).then((res) => res.json());
+
+	const {access_token = null, refresh_token = null} = a;
 
 	if (!access_token || !refresh_token) {
-		throw new Error("Lol!");
+		throw new Error("No access token found");
 	}
 
 	const me: User | {unauthorized: true} = await fetch("https://discord.com/api/users/@me", {
@@ -52,12 +53,18 @@ app.get("/callback", async (req, res) => {
 	}).then((res) => res.json());
 
 	if (!("id" in me)) {
-		throw new Error("p");
+		throw new Error("What");
 	}
+
+	await prisma.user.upsert({
+		where: {snowflake: me.id},
+		update: {access_token, refresh_token},
+		create: {access_token, refresh_token, snowflake: me.id},
+	});
 
 	await client.invite(me.id);
 
-	res.sendFile("done.html");
+	res.sendFile("success.html");
 });
 
 const client = new Client();

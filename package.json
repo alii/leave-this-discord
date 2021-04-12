@@ -5,7 +5,7 @@
 	"author": "Alistair Smith",
 	"license": "MIT",
 	"scripts": {
-		"dev": "ts-node-dev"
+		"dev": "ts-node-dev src/index.ts"
 	},
 	"devDependencies": {
 		"@types/ioredis": "^4.22.3",
