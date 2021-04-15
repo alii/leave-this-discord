@@ -22,6 +22,34 @@ export class Client extends DiscordClient {
 		});
 	}
 
+	async refreshToken(snowflake: string, refresh_token: string) {
+		const body = new URLSearchParams({
+			client_id: process.env.CLIENT_ID!,
+			client_secret: process.env.CLIENT_SECRET!,
+			grant_type: "refresh_token",
+			redirect_uri: "http://localhost:8080/callback",
+			refresh_token,
+		}).toString();
+
+		const req = await fetch("https://discord.com/api/oauth2/token", {
+			headers: {"Content-Type": "application/x-www-form-urlencoded"},
+			method: "POST",
+			body,
+		}).then((res) => res.json());
+
+		const json = await req.json();
+
+		await prisma.user.update({
+			where: {snowflake},
+			data: {
+				access_token: json.access_token,
+				refresh_token: json.refresh_token,
+			},
+		});
+
+		return json;
+	}
+
 	/**
 	 * Gets OAuth keys from the database, refreshes if needed or throws if they do not exist
 	 * @param snowflake The id of the user
@@ -32,7 +60,7 @@ export class Client extends DiscordClient {
 		});
 
 		if (!user) {
-			return null;
+			throw new Error("You must OAuth first!");
 		}
 
 		// TODO: This should revalidate if tokens are expired
@@ -54,7 +82,7 @@ export class Client extends DiscordClient {
 		const endpoint = `/guilds/${Client.SERVER_ID}/members/${snowflake}`;
 		const url = `https://discord.com/api/v8${endpoint}`;
 
-		await fetch(url, {
+		const request = await fetch(url, {
 			headers: {
 				"Authorization": `Bot ${process.env.DISCORD_TOKEN}`,
 				"Content-Type": "application/json",
@@ -62,5 +90,7 @@ export class Client extends DiscordClient {
 			body: JSON.stringify({access_token}),
 			method: "PUT",
 		});
+
+		console.log(await request.json());
 	}
 }

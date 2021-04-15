@@ -9,6 +9,7 @@ import {object, string} from "zod";
 import fetch from "node-fetch";
 import {User} from "discord.js";
 import {prisma} from "./prisma";
+import {OAuthData} from "./types";
 
 const cwd = process.cwd();
 const app = fastify();
@@ -38,13 +39,13 @@ app.get("/callback", async (req, res) => {
 		scope,
 	}).toString();
 
-	const a = await fetch("https://discord.com/api/oauth2/token", {
+	const data = await fetch("https://discord.com/api/oauth2/token", {
 		headers: {"Content-Type": "application/x-www-form-urlencoded"},
 		method: "POST",
 		body,
-	}).then((res) => res.json());
+	}).then((res) => res.json() as Promise<OAuthData>);
 
-	const {access_token = null, refresh_token = null} = a;
+	const {access_token = null, refresh_token = null} = data;
 
 	if (!access_token || !refresh_token) {
 		throw new Error("No access token found");
