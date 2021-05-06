@@ -26,6 +26,7 @@
 	"dependencies": {
 		"@prisma/client": "^2.22.0",
 		"colorette": "^1.2.2",
+		"cross-env": "^7.0.3",
 		"dayjs": "^1.10.4",
 		"discord.js": "^12.5.3",
 		"dotenv": "^9.0.0",
