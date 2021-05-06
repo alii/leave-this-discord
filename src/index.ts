@@ -96,5 +96,5 @@ client
 	.then(() => console.log(`${green("discord")} ready`))
 	.then(() => prisma.$connect())
 	.then(() => console.log(`${yellow("db")} ready`))
-	.then(() => app.listen(port))
+	.then(() => app.listen(port, "0.0.0.0"))
 	.then(() => console.log(`${blue("http")} ready`));
