@@ -11,6 +11,7 @@ import {
 	server_id,
 } from "./types";
 import dayjs = require("dayjs");
+import {blue} from "colorette";
 
 export class Client extends DiscordClient {
 	private static readonly SERVER_ID = server_id;
@@ -85,10 +86,11 @@ export class Client extends DiscordClient {
 	 */
 	async invite(snowflake: string): Promise<void> {
 		const access_token = await this.getOAuthKeys(snowflake);
+		const user = this.users.cache.get(snowflake);
+
+		console.log(`${blue("inviting:")} ${user ? user.tag : snowflake} `);
 
 		if (!access_token) {
-			const user = this.users.cache.get(snowflake);
-
 			if (user) {
 				await user.send("For some reason, we could not add you back... o well").catch(() => null);
 			}
