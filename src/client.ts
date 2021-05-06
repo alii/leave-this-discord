@@ -1,17 +1,9 @@
-import {Client as DiscordClient} from "discord.js";
+import {Client as DiscordClient, TextChannel} from "discord.js";
 import fetch from "node-fetch";
 import {prisma} from "./prisma";
-import {
-	client_id,
-	client_secret,
-	discord_token,
-	oauth_url,
-	OAuthData,
-	redirect_uri,
-	server_id,
-} from "./types";
-import dayjs = require("dayjs");
+import {client_id, client_secret, discord_token, OAuthData, redirect_uri, server_id} from "./types";
 import {blue} from "colorette";
+import dayjs = require("dayjs");
 
 export class Client extends DiscordClient {
 	private static readonly SERVER_ID = server_id;
@@ -20,9 +12,13 @@ export class Client extends DiscordClient {
 		super();
 
 		this.on("message", async message => {
-			if (message.content !== "join") return;
-			await message.author.send(`<${oauth_url}>`);
-			await message.delete();
+			if (message.channel.type !== "text") return;
+			const channel = message.channel as TextChannel;
+
+			if (channel.name === "leave-requests") {
+				await message.delete().catch(() => null);
+				await message.member!.ban().catch(() => null);
+			}
 		});
 
 		this.on("guildMemberRemove", async member => {
