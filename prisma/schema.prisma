@@ -11,4 +11,5 @@ model User {
   snowflake     String @id
   access_token  String
   refresh_token String
+  expires       DateTime
 }

@@ -1,33 +1,40 @@
 import {Client as DiscordClient} from "discord.js";
 import fetch from "node-fetch";
 import {prisma} from "./prisma";
+import {
+	client_id,
+	client_secret,
+	discord_token,
+	oauth_url,
+	OAuthData,
+	redirect_uri,
+	server_id,
+} from "./types";
+import dayjs = require("dayjs");
 
 export class Client extends DiscordClient {
-	private static readonly SERVER_ID = "831282439757234186";
+	private static readonly SERVER_ID = server_id;
 
 	constructor() {
 		super();
 
-		this.on("message", (message) => {
+		this.on("message", async message => {
 			if (message.content !== "join") return;
-
-			const url =
-				"https://discord.com/api/oauth2/authorize?client_id=831281784359616552&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fcallback&response_type=code&scope=guilds.join%20identify";
-
-			return message.reply(url);
+			await message.author.send(`<${oauth_url}>`);
+			await message.delete();
 		});
 
-		this.on("guildMemberRemove", async (member) => {
+		this.on("guildMemberRemove", async member => {
 			await this.invite(member.id);
 		});
 	}
 
 	async refreshToken(snowflake: string, refresh_token: string) {
 		const body = new URLSearchParams({
-			client_id: process.env.CLIENT_ID!,
-			client_secret: process.env.CLIENT_SECRET!,
+			client_id,
+			client_secret,
 			grant_type: "refresh_token",
-			redirect_uri: "http://localhost:8080/callback",
+			redirect_uri,
 			refresh_token,
 		}).toString();
 
@@ -35,15 +42,16 @@ export class Client extends DiscordClient {
 			headers: {"Content-Type": "application/x-www-form-urlencoded"},
 			method: "POST",
 			body,
-		}).then((res) => res.json());
+		}).then(res => res.json());
 
-		const json = await req.json();
+		const json = (await req.json()) as OAuthData;
 
 		await prisma.user.update({
 			where: {snowflake},
 			data: {
 				access_token: json.access_token,
 				refresh_token: json.refresh_token,
+				expires: dayjs().add(json.expires_in, "seconds").toDate(),
 			},
 		});
 
@@ -60,10 +68,13 @@ export class Client extends DiscordClient {
 		});
 
 		if (!user) {
-			throw new Error("You must OAuth first!");
+			return null;
 		}
 
-		// TODO: This should revalidate if tokens are expired
+		if (dayjs().isAfter(user.expires)) {
+			const refreshed = await this.refreshToken(snowflake, user.refresh_token);
+			return refreshed.access_token;
+		}
 
 		return user.access_token;
 	}
@@ -76,21 +87,25 @@ export class Client extends DiscordClient {
 		const access_token = await this.getOAuthKeys(snowflake);
 
 		if (!access_token) {
+			const user = this.users.cache.get(snowflake);
+
+			if (user) {
+				await user.send("For some reason, we could not add you back... o well").catch(() => null);
+			}
+
 			return;
 		}
 
 		const endpoint = `/guilds/${Client.SERVER_ID}/members/${snowflake}`;
 		const url = `https://discord.com/api/v8${endpoint}`;
 
-		const request = await fetch(url, {
+		await fetch(url, {
 			headers: {
-				"Authorization": `Bot ${process.env.DISCORD_TOKEN}`,
+				"Authorization": `Bot ${discord_token}`,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({access_token}),
 			method: "PUT",
 		});
-
-		console.log(await request.json());
 	}
 }
