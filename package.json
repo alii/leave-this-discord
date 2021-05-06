@@ -6,7 +6,12 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "ts-node-dev --exit-child src/index.ts",
-		"start": "ts-node src/index.ts"
+		"build": "yarn tsc",
+		"generate": "yarn prisma generate",
+		"prod": "yarn migrate:deploy && yarn start",
+		"start": "cross-env NODE_ENV=production node .",
+		"migrate:deploy": "prisma migrate deploy",
+		"migrate": "prisma migrate dev"
 	},
 	"devDependencies": {
 		"@types/ioredis": "^4.26.1",

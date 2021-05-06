@@ -1,11 +1,24 @@
-version: "3.9"
+version: "3"
 
 services:
   postgres:
     image: postgres
-    ports:
-      - 5432:5432
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
+
+  app:
+    ports:
+      - 8080:3000
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    env_file: .env.prod
+    command: yarn prod
+
+volumes:
+  postgres_data:
